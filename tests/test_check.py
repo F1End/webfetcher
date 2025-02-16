@@ -16,39 +16,60 @@ class TestFileCheck(TestCase):
         file = "webpage.html"
         check_type = "size"
         old_file = "webpage_old.html"
-        tol = 0.97
+        tol = 0.07
         test_filecheck = check.FileCheck(file, check_type, old_file, tol)
         self.assertEqual(test_filecheck.checked_file, file)
         self.assertEqual(test_filecheck.check_type, check_type)
         self.assertEqual(test_filecheck.check_agaist, old_file)
         self.assertEqual(test_filecheck.tolerance, tol)
 
-    def test_get_file_size(self):
-        pass
+    @patch('src.check._get_size')
+    def test_check_size(self, get_size_mock):
+        tolerance = 0.05
+        check_content = "Some str of 100 characters"
+        check_against_content = "Some str of 104 characters"
+        self.test_filecheck.tolerance = tolerance
+        self.test_filecheck.check_file_content = check_content
+        self.test_filecheck.check_against_content = check_against_content
 
-    def test_check_html(self):
-        pass
-        # file = "webpage.html"
-        # check_type = "size"
-        # old_file = "webpage_old.html"
-        # tol = 0.97
-        # test_filecheck = check.FileCheck(file, check_type, old_file, tol)
-        #
-        # # Case 1: valid html
-        # valid_html = """<!DOCTYPE html><html><head></head><body></body></html>"""
-        # test_filecheck.check_file_content = valid_html
-        # expected = "HTML is valid"
-        # validate = test_filecheck.check_html()
-        # self.assertEqual(validate, expected)
-        #
-        # # Case2: invalid html
-        # invalid_html = """<!DOCTYPE html><html><head></head>"""
-        # # invalid_html = """<html><head></head></html>"""
-        # test_filecheck.check_file_content = invalid_html
-        # expected = True
-        # validate = test_filecheck.check_html()
-        # print(validate)
-        # # self.assertEqual(validate, expected)
+        # Case 1: Within tolerance
+        get_size_mock.side_effect = [100, 104]
+        expected_calls = [call(check_content), call(check_against_content)]
+        expected_return = None
+        result = self.test_filecheck.check_size()
+        get_size_mock.assert_has_calls(expected_calls)
+        self.assertEqual(result, expected_return)
+
+        # Case 2: Larger than tolerance
+        get_size_mock.side_effect = [100, 106]
+        expected_calls = [call(check_content), call(check_against_content)]
+        expected_return_2 = 6/100
+        result = self.test_filecheck.check_size()
+        get_size_mock.assert_has_calls(expected_calls)
+        self.assertEqual(result, expected_return_2)
+
+    @patch('src.check.len')
+    def test__get_size(self, len_mock):
+        content = "abcde"
+        s = len(content)
+        len_mock.return_value = s
+        size = self.test_filecheck._get_size(content)
+        len_mock.assert_called_with(content)
+        self.assertEqual(size, s)
+
+    @patch('src.validatehtml.ChkHtmlStructure')
+    def test_check_html(self, chkhtml_mock):
+        instance_mock = MagicMock()
+        chkhtml_mock.return_value = instance_mock
+        errors = {'unclosed_opening': ['html'], 'unexpected_closing': ['/body']}
+        instance_mock.run_check.return_value = errors
+        content = "some-html-content"
+        self.test_filecheck.check_file_content = content
+
+        html_errors = self.test_filecheck.check_html()
+        self.assertEqual(html_errors, errors)
+        chkhtml_mock.assert_called_once()
+        instance_mock.run_check.assert_called_with(content)
 
     def test_check_size(self):
         pass
@@ -90,7 +111,6 @@ class TestFileCheck(TestCase):
         self.assertEqual(self.test_filecheck.check_file_content, load_file_return_value[0])
         self.assertEqual(self.test_filecheck.check_against_content, load_url_return_value)
 
-
     @patch('src.check.open')
     def test__load_from_file(self, open_mock):
         file_mock = MagicMock()
@@ -117,8 +137,6 @@ class TestFileCheck(TestCase):
         output = self.test_filecheck._load_from_url(check_against_url)
         requests_mock.get.assert_called_with(check_against_url)
         self.assertEqual(output, fake_site_content)
-
-
 
 
 if __name__ == '__main__':
