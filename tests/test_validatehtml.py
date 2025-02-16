@@ -1,10 +1,43 @@
 from unittest import TestCase, main
 from unittest.mock import MagicMock, patch, call
+import re
 
 from src import validatehtml
 
 
-class TestChkHtmlStructure(TestCase):
+# class TestHTMLStructureErrorException(TestCase):
+#
+
+
+class TestHTMLStructureError(TestCase):
+    def test_htmlstructureerr_exception(self):
+        # Case 1: Only unclosed
+        tags_1 = ["html", "body"]
+        errors = {"unclosed_opening": tags_1, "unexpected_closing": []}
+        expected_msg_1 = f"Inconsistencies in HTML structure found." \
+                       f"\nUnclosed opening tags: html; body"
+        with self.assertRaises(validatehtml.HTMLStructureError) as e:
+            raise validatehtml.HTMLStructureError(errors)
+        self.assertEqual(expected_msg_1, str(e.exception))
+
+        # Case 2: Only unopened
+        tags_2 = ["/script", "/script"]
+        errors = {"unclosed_opening": [], "unexpected_closing": tags_2}
+        expected_msg_2 = f"Inconsistencies in HTML structure found." \
+                       f"\nUnopened closing tags: /script; /script"
+        with self.assertRaises(validatehtml.HTMLStructureError) as e:
+            raise validatehtml.HTMLStructureError(errors)
+        self.assertEqual(expected_msg_2, str(e.exception))
+
+        # Case 3: Both types
+        errors = {"unclosed_opening": tags_1, "unexpected_closing": tags_2}
+        expected_msg_3 = f"Inconsistencies in HTML structure found." \
+                       f"\nUnopened closing tags: /script; /script" \
+                       f"\nUnclosed opening tags: html; body"
+        with self.assertRaises(validatehtml.HTMLStructureError) as e:
+            raise validatehtml.HTMLStructureError(errors)
+        self.assertEqual(expected_msg_3, str(e.exception))
+
 
     @patch('src.validatehtml.re')
     def setUp(self, re_mock):
@@ -37,10 +70,13 @@ class TestChkHtmlStructure(TestCase):
         self.assertEqual(test_validator.tag_stack, default_stack_value)
         self.assertEqual(test_validator.errors, default_errors)
 
+    @patch("src.validatehtml.ChkHtmlStructure._clean_content")
     @patch("src.validatehtml.ChkHtmlStructure._process_tag")
     @patch("src.validatehtml.ChkHtmlStructure._process_outcome")
-    def test_run_checks(self, mock_process_outcome, mock_process_tag):
-        fake_html_cotent = "<some> <\html> <content>"
+    def test_run_checks(self, mock_process_outcome, mock_process_tag, mock_clean_content):
+        preproccessed_html_content = """<some> <!--<var 12 />--> </html> <content>"""
+        fake_html_cotent = """<some>  </html> <content>"""
+        mock_clean_content.return_value = fake_html_cotent
         match_mock1, match_mock2, match_mock3 = MagicMock(), MagicMock(), MagicMock()
         group_mock = MagicMock()
         fake_tag_call_args = ["tag1", "tag2", "tag3"]
@@ -50,7 +86,7 @@ class TestChkHtmlStructure(TestCase):
         match_mock3.group.return_value = group_mock
         self.test_checker.pattern.finditer.return_value = [match_mock1, match_mock2, match_mock3]
 
-        self.test_checker.run_checks(fake_html_cotent)
+        self.test_checker.run_checks(preproccessed_html_content)
         self.test_checker.pattern.finditer.assert_called_with(fake_html_cotent)
         match_mock1.group.assert_called_with(1)
         match_mock2.group.assert_called_with(1)
@@ -60,6 +96,22 @@ class TestChkHtmlStructure(TestCase):
                                           call(fake_tag_call_args[1]),
                                           call(fake_tag_call_args[2])])
         mock_process_outcome.assert_called_once()
+        mock_clean_content.assert_called_with(preproccessed_html_content)
+
+    @patch("src.validatehtml.re.sub")
+    def test__clean_content(self, re_mock):
+        regex_1 = r'<!--.*?-->'
+        regex_2 = r'<script.*?</script>|<style.*?</style>'
+        input_content = "some content as unprocessed input"
+        returned_1 = "After comment extration"
+        returned_2 = "After script/style internal tag extraction"
+        re_mock.side_effect = [returned_1, returned_2]
+        expected_calls = [call(regex_1, "", input_content, flags=re.DOTALL),
+                          call(regex_2, "", returned_1, flags=re.DOTALL)]
+
+        cleaned = self.test_checker._clean_content(input_content)
+        self.assertEqual(cleaned, returned_2)
+        re_mock.assert_has_calls(expected_calls)
 
     @patch("src.validatehtml.ChkHtmlStructure._move_errors_from_stack")
     @patch("src.validatehtml.ChkHtmlStructure._return_errors")
@@ -102,8 +154,6 @@ class TestChkHtmlStructure(TestCase):
         move_err_mock.reset_mock()
         return_err_mock.reset_mock()
 
-
-
     def test__mover_errors_from_stack(self):
         # Case 1: Errors in stack (unclosed openings)
         unclosed = ["head", "body"]
@@ -120,7 +170,6 @@ class TestChkHtmlStructure(TestCase):
         self.test_checker._move_errors_from_stack()
         unclosed_mock.append.assert_not_called()
         self.assertEqual(self.test_checker.errors, unclosed_mock)
-
 
     @patch("src.validatehtml.ChkHtmlStructure._process_closing_tag")
     def test__process_tag(self, process_closing_mock):
@@ -174,7 +223,6 @@ class TestChkHtmlStructure(TestCase):
         self.assertEqual(self.test_checker.errors["unclosed_opening"], [tag])
         self.assertEqual(self.test_checker.errors["unexpected_closing"], [])
         return_err_mock.assert_called_once()
-
         # reset setUp
         self.test_checker.errors["unclosed_opening"] = []
         self.test_checker.errors["unexpected_closing"] = []
@@ -210,4 +258,4 @@ class TestChkHtmlStructure(TestCase):
 
         # Case 2: raise_exception is True
         self.test_checker.raise_exception = True
-        self.assertRaises(Exception, self.test_checker._return_errors)
+        self.assertRaises(validatehtml.HTMLStructureError, self.test_checker._return_errors)
