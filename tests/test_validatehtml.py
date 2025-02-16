@@ -15,7 +15,7 @@ class TestHTMLStructureError(TestCase):
         tags_1 = ["html", "body"]
         errors = {"unclosed_opening": tags_1, "unexpected_closing": []}
         expected_msg_1 = f"Inconsistencies in HTML structure found." \
-                       f"\nUnclosed opening tags: html; body"
+                         f"\nUnclosed opening tags: html; body"
         with self.assertRaises(validatehtml.HTMLStructureError) as e:
             raise validatehtml.HTMLStructureError(errors)
         self.assertEqual(expected_msg_1, str(e.exception))
@@ -24,7 +24,7 @@ class TestHTMLStructureError(TestCase):
         tags_2 = ["/script", "/script"]
         errors = {"unclosed_opening": [], "unexpected_closing": tags_2}
         expected_msg_2 = f"Inconsistencies in HTML structure found." \
-                       f"\nUnopened closing tags: /script; /script"
+                         f"\nUnopened closing tags: /script; /script"
         with self.assertRaises(validatehtml.HTMLStructureError) as e:
             raise validatehtml.HTMLStructureError(errors)
         self.assertEqual(expected_msg_2, str(e.exception))
@@ -32,12 +32,11 @@ class TestHTMLStructureError(TestCase):
         # Case 3: Both types
         errors = {"unclosed_opening": tags_1, "unexpected_closing": tags_2}
         expected_msg_3 = f"Inconsistencies in HTML structure found." \
-                       f"\nUnopened closing tags: /script; /script" \
-                       f"\nUnclosed opening tags: html; body"
+                         f"\nUnopened closing tags: /script; /script" \
+                         f"\nUnclosed opening tags: html; body"
         with self.assertRaises(validatehtml.HTMLStructureError) as e:
             raise validatehtml.HTMLStructureError(errors)
         self.assertEqual(expected_msg_3, str(e.exception))
-
 
     @patch('src.validatehtml.re')
     def setUp(self, re_mock):

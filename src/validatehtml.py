@@ -27,7 +27,6 @@ class HTMLStructureError(Exception):
         return self.msg + self.format_errors()
 
 
-
 class ChkHtmlStructure:
     def __init__(self, full_check: bool = True, raise_exception: bool = False):
         """
