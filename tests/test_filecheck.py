@@ -10,13 +10,13 @@ class TestFileCheck(TestCase):
         file = "webpage.html"
         check_type = "size"
         old_file = "webpage_old.html"
-        self.test_filecheck =filecheck.FileCheck(file, check_type, old_file)
+        self.test_filecheck = filecheck.FileCheck(file, check_type, old_file)
 
     def test_init(self):
         file = "webpage.html"
         check_type = {"html_structure": True}
         tol = 0.07
-        test_filecheck =filecheck.FileCheck(file, check_type, tol)
+        test_filecheck = filecheck.FileCheck(file, check_type, tol)
         self.assertEqual(test_filecheck.checked_file, file)
         self.assertEqual(test_filecheck.check_type, check_type)
         self.assertEqual(test_filecheck.tolerance, tol)
@@ -56,7 +56,7 @@ class TestFileCheck(TestCase):
         mock_site_chk.return_value = None
         mock_html_chk.return_value = "Some html issue is returned"
 
-        self.assertRaises(Exception,self.test_filecheck.run_checks)
+        self.assertRaises(Exception, self.test_filecheck.run_checks)
         mock_file_chk.assert_called_with(old_file)
         mock_site_chk.assert_called_with(url)
         mock_html_chk.assert_called_with(html_value)
