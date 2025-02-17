@@ -1,7 +1,7 @@
 from unittest import TestCase, main
 from unittest.mock import MagicMock, patch, call
 
-from src import check
+from src import filecheck
 
 
 class TestFileCheck(TestCase):
@@ -10,20 +10,20 @@ class TestFileCheck(TestCase):
         file = "webpage.html"
         check_type = "size"
         old_file = "webpage_old.html"
-        self.test_filecheck = check.FileCheck(file, check_type, old_file)
+        self.test_filecheck =filecheck.FileCheck(file, check_type, old_file)
 
     def test_init(self):
         file = "webpage.html"
         check_type = "size"
         old_file = "webpage_old.html"
         tol = 0.07
-        test_filecheck = check.FileCheck(file, check_type, old_file, tol)
+        test_filecheck =filecheck.FileCheck(file, check_type, old_file, tol)
         self.assertEqual(test_filecheck.checked_file, file)
         self.assertEqual(test_filecheck.check_type, check_type)
-        self.assertEqual(test_filecheck.check_agaist, old_file)
+        self.assertEqual(test_filecheck.check_against, old_file)
         self.assertEqual(test_filecheck.tolerance, tol)
 
-    @patch('src.check._get_size')
+    @patch('src.filecheck._get_size')
     def test_check_size(self, get_size_mock):
         tolerance = 0.05
         check_content = "Some str of 100 characters"
@@ -48,7 +48,7 @@ class TestFileCheck(TestCase):
         get_size_mock.assert_has_calls(expected_calls)
         self.assertEqual(result, expected_return_2)
 
-    @patch('src.check.len')
+    @patch('src.filecheck.len')
     def test__get_size(self, len_mock):
         content = "abcde"
         s = len(content)
@@ -74,8 +74,8 @@ class TestFileCheck(TestCase):
     def test_check_size(self):
         pass
 
-    @patch('src.check.FileCheck._load_from_file')
-    @patch('src.check.FileCheck._load_from_url')
+    @patch('src.filecheck.FileCheck._load_from_file')
+    @patch('src.filecheck.FileCheck._load_from_url')
     def test__load_contents(self, load_url_mock, load_file_mock):
         # Case 1: Load file + load file
         load_file_return_values = ["Content_for_first_call", "Content_for_second_call",
@@ -111,7 +111,7 @@ class TestFileCheck(TestCase):
         self.assertEqual(self.test_filecheck.check_file_content, load_file_return_value[0])
         self.assertEqual(self.test_filecheck.check_against_content, load_url_return_value)
 
-    @patch('src.check.open')
+    @patch('src.filecheck.open')
     def test__load_from_file(self, open_mock):
         file_mock = MagicMock()
         fake_content = "<some html file content>"
@@ -125,7 +125,7 @@ class TestFileCheck(TestCase):
 
         self.assertEqual(output, fake_content)
 
-    @patch('src.check.requests')
+    @patch('src.filecheck.requests')
     def test__load_from_url(self, requests_mock):
         request_get_mock = MagicMock()
         fake_site_content = "<Some content downloaded from web>"

@@ -1,7 +1,6 @@
 """
 Run checks on file output (website content) from fetch module
 """
-from io import BytesIO
 import requests
 
 from src import validatehtml
@@ -11,13 +10,20 @@ class FileCheck:
     def __init__(self, checked_file: str, check_type: str, check_against: str, tolerance: float = 0.05):
         self.checked_file = checked_file
         self.check_type = check_type
-        self.check_agaist = check_against
+        self.check_against = check_against
         self.tolerance = tolerance
         self.check_file_content = None
         self.check_against_content = None
+        self.check_map = {"html_structure": self.check_html,
+                          "size_change": self.check_size}
 
     def run_check(self):
-        raise NotImplemented
+        issues = []
+        self._load_contents()
+        for check in self.check_type:
+            flagged = self.check_map[check]()
+            issues.append(flagged)
+        return issues
 
     def check_html(self) -> str:
         errors = validatehtml.ChkHtmlStructure().run_check(self.check_file_content)

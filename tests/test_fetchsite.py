@@ -3,7 +3,7 @@ from unittest import TestCase, main
 from unittest.mock import MagicMock, patch
 
 
-from src import fetch
+from src import fetchsite
 
 
 class TestFetchSite(TestCase):
@@ -11,14 +11,14 @@ class TestFetchSite(TestCase):
         url = "https://somewebsite.com"
         default_content = None
         default_content_time = None
-        test_fetch = fetch.FetchSite(url)
+        test_fetch = fetchsite.FetchSite(url)
 
         self.assertEqual(test_fetch.url, url)
         self.assertEqual(test_fetch.content, default_content)
         self.assertEqual(test_fetch.content_time, default_content_time)
 
-    @patch("src.fetch.FetchSite._timestamp_content")
-    @patch("src.fetch.requests")
+    @patch("src.fetchsite.FetchSite._timestamp_content")
+    @patch("src.fetchsite.requests")
     def test_download_content(self, requests_mock, timestamp_mock):
         response_mock = MagicMock()
         fake_content = "<fake site content>"
@@ -26,7 +26,7 @@ class TestFetchSite(TestCase):
         requests_mock.get.return_value = response_mock
         url = "https://somewebsite.com"
 
-        test_fetch = fetch.FetchSite(url)
+        test_fetch = fetchsite.FetchSite(url)
         test_fetch_chain = test_fetch.download_content()  # testing return_self
 
         timestamp_mock.assert_called_once()
@@ -34,8 +34,8 @@ class TestFetchSite(TestCase):
         self.assertEqual(test_fetch.content, fake_content)
         self.assertEqual(test_fetch, test_fetch_chain)  # testing return_self
 
-    @patch("src.fetch.open")
-    @patch("src.fetch.FetchSite._format_full_path")
+    @patch("src.fetchsite.open")
+    @patch("src.fetchsite.FetchSite._format_full_path")
     def test_to_file(self, format_path_mock, open_mock):
         file_mock = MagicMock()
         open_mock.return_value.__enter__.return_value = file_mock
@@ -46,7 +46,7 @@ class TestFetchSite(TestCase):
         content_mock = "Website_content"
 
         url = "https://somewebsite.com/somepage.html"
-        fetch_test = fetch.FetchSite(url)
+        fetch_test = fetchsite.FetchSite(url)
         fetch_test.content = content_mock
 
         # Case 1 (default): timestamp -> T, file_name and output dir -> None
@@ -57,8 +57,7 @@ class TestFetchSite(TestCase):
         open_mock.assert_called_with(mocked_filepath, "wb")
         file_mock.write.assert_called_with(content_mock)
 
-
-    @patch("src.fetch.Path")
+    @patch("src.fetchsite.Path")
     def test__format_filename(self, path_mock):
         # Setup
         filename = "somefile.txt"
@@ -73,7 +72,7 @@ class TestFetchSite(TestCase):
         content_time_mock.strftime.return_value = fake_time_str
         expected_format_call = "%Y-%m-%d-%H-%M-%S"
 
-        fetch_test = fetch.FetchSite(url_mock)
+        fetch_test = fetchsite.FetchSite(url_mock)
         fetch_test.content_time = content_time_mock
 
         # Case 1 (default): timestamp -> T, file_name -> None
@@ -124,12 +123,12 @@ class TestFetchSite(TestCase):
         content_time_mock.reset_mock()
         path_mock.reset_mock()
 
-    @patch("src.fetch.Path")
-    @patch("src.fetch.FetchSite._format_filename")
+    @patch("src.fetchsite.Path")
+    @patch("src.fetchsite.FetchSite._format_filename")
     def test__format_full_path(self, format_fn_mock, path_mock):
         # Setup
         url = "https://somewebsite.com"
-        test_fetch = fetch.FetchSite(url)
+        test_fetch = fetchsite.FetchSite(url)
         mock_output_filename = "somefile.txt"
         format_fn_mock.return_value = mock_output_filename
 
@@ -164,13 +163,13 @@ class TestFetchSite(TestCase):
         path_mock.reset_mock()
         path_instance_mock.reset_mock()
 
-    @patch("src.fetch.datetime.datetime")
+    @patch("src.fetchsite.datetime.datetime")
     def test__timestamp_content(self, datetime_mock):
         timestamp = "Some timestamp"
         datetime_mock.now.return_value = timestamp
         url = "https://somewebsite.com"
 
-        test_fetch = fetch.FetchSite(url)
+        test_fetch = fetchsite.FetchSite(url)
         test_fetch._timestamp_content()
 
         datetime_mock.now.assert_called_once()
