@@ -14,7 +14,7 @@ def parse_args():
                         required=True)
     parser.add_argument("--tol", type=float, default=0.05,
                         help="Acceptable difference between files in float."
-                        "e.g., for 15% acceptable differene \n--tol 0.15"
+                        "e.g., for 15% acceptable difference \n--tol 0.15"
                         "\ndefaults to 5% (not applicable to html_structure check)")
     parser.add_argument("--html_structure", action="store_true",
                         help="Check file for open/closing html tag irregularities.")
