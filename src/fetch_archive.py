@@ -13,7 +13,9 @@ from collections import defaultdict
 CDX_URL = "https://web.archive.org/cdx/search/cdx"
 ARCHIVE_URL = "https://web.archive.org/web/{timestamp}/{url}"
 
-REQUEST_DELAY = 1.5  # seconds
+REQUEST_DELAY = 3  # seconds
+
+session = requests.Session()
 
 
 def sanitize_filename(value):
@@ -118,26 +120,69 @@ def choose_closest(group, time_of_day):
     return best
 
 
-def download_snapshot(ts, url, output_dir, file_string):
+def download_snapshot(ts, url, output_dir, file_string, force_redownload=False):
 
     ts_str = ts.strftime("%Y%m%d%H%M%S")
     formatted = ts.strftime("%Y-%m-%d-%H-%M-%S")
 
     archive_url = ARCHIVE_URL.format(timestamp=ts_str, url=url)
 
-    logging.info(f"Downloading {archive_url}")
-
-    logging.warning("Rate limiting requests")
-    time.sleep(REQUEST_DELAY)
-
-    r = requests.get(archive_url)
-    r.raise_for_status()
-
     filename = f"{formatted}_{file_string}"
-    path = os.path.join(output_dir, filename)
+    final_path = os.path.join(output_dir, filename)
+    tmp_path = final_path + ".tmp"
 
-    with open(path, "wb") as f:
-        f.write(r.content)
+    if not force_redownload and os.path.exists(final_path):
+        logging.info(f"Skipping existing file: {filename}")
+        return
+
+    delay = REQUEST_DELAY
+
+    for attempt in range(1, MAX_RETRIES + 1):
+
+        try:
+
+            logging.info(f"Downloading {archive_url}")
+
+            logging.warning("Rate limiting requests")
+            time.sleep(delay)
+
+            response = session.get(archive_url, timeout=30)
+
+            if response.status_code >= 500:
+                raise requests.exceptions.HTTPError(
+                    f"Server error {response.status_code}"
+                )
+
+            response.raise_for_status()
+
+            with open(tmp_path, "wb") as f:
+                f.write(response.content)
+
+            os.replace(tmp_path, final_path)
+
+            logging.info(f"Saved {filename}")
+
+            return
+
+        except requests.exceptions.RequestException as e:
+
+            if attempt == MAX_RETRIES:
+
+                logging.error(
+                    f"Failed after {MAX_RETRIES} attempts: {archive_url}"
+                )
+
+                if os.path.exists(tmp_path):
+                    os.remove(tmp_path)
+
+                raise
+
+            logging.warning(
+                f"Attempt {attempt}/{MAX_RETRIES} failed: {e}"
+            )
+
+            delay *= 2
+
 
 def fetch_from_archive(args):
 
@@ -184,4 +229,4 @@ def fetch_from_archive(args):
         logging.warning("No snapshots matched selection criteria")
 
     for ts in selected:
-        download_snapshot(ts, args.url, args.output_dir, file_string)
+        download_snapshot(ts, args.url, args.output_dir, file_string, args.force_redownload)
