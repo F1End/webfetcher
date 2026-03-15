@@ -23,6 +23,11 @@ def parse_args():
 
     parser.add_argument("-verbose", action="store_true")
 
+    parser.add_argument(
+    "--force_redownload",
+    action="store_true",
+    help="Ignore resume logic and redownload all files")
+
     args = parser.parse_args()
 
     if (args.day_of_week is None and args.day_of_month is None) or \
